@@ -39,22 +39,11 @@ fn dfs(
     res
 }
 
-fn print_roi(roi: &Vec<Vec<char>>) {
-    let mut p = String::new();
-    for v in roi {
-        for c in v {
-            p.push(*c);
-        }
-        p.push('\n');
-    }
-    println!("{}", p);
-}
-
 fn check_X(grid: &Vec<Vec<char>>, i: usize, j: usize) -> bool {
     let n = grid.len();
     let m = grid[0].len();
 
-    if i + 3 >= n || j + 3 >= m {
+    if i > n - 3 || j > m - 3 {
         return false;
     }
 
@@ -69,7 +58,6 @@ fn check_X(grid: &Vec<Vec<char>>, i: usize, j: usize) -> bool {
     }
     let mut res = false;
     if roi[1][1] == 'A' {
-        print_roi(&roi);
         let mut check = 0;
         if roi[0][0] == 'M' {
             let ret = dfs(&roi, 0, 0, &(1, 1), Some('M'));
@@ -97,7 +85,6 @@ fn check_X(grid: &Vec<Vec<char>>, i: usize, j: usize) -> bool {
         }
 
         res = check == 2;
-        println!("{}", res);
     }
     return res;
 }
