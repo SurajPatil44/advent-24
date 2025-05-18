@@ -29,13 +29,14 @@ fn fix_record(record: &Vec<u32>, after: &HashMap<u32, HashSet<u32>>, swap_ind: u
     cpy.swap(swap_ind, swap_ind + 1);
 
     loop {
-        let (v, swap_ind) = check_record(&cpy, &after);
-        //dbg!(v, &cpy);
-        if v {
-            break;
+        match check_record(&cpy, &after) {
+            (true, _) => {
+                break;
+            }
+            (false, val) => {
+                cpy.swap(val as usize, val as usize + 1);
+            }
         }
-
-        cpy.swap(swap_ind as usize, swap_ind as usize + 1);
     }
 
     cpy[cpy.len() / 2]
