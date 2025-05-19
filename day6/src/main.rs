@@ -16,11 +16,16 @@ fn valid(grid: &Vec<Vec<char>>, pos: (isize, isize)) -> bool {
     (pos.0 >= 0 && pos.0 < n) && (pos.1 >= 0 && pos.1 < m)
 }
 
-fn bfs(grid: &Vec<Vec<char>>, start: (usize, usize)) -> usize {
-    let mut visited: HashSet<(usize, usize)> = HashSet::new();
+fn bfs(
+    grid: &Vec<Vec<char>>,
+    start: (usize, usize),
+    places: &mut HashSet<(usize, usize)>,
+) -> (usize, bool) {
+    let mut visited: HashSet<(Dir, (usize, usize))> = HashSet::new();
     let mut deq: VecDeque<(usize, usize)> = VecDeque::new();
     deq.push_back(start);
     let mut dir = Dir::North;
+    let mut looping = false;
 
     let neigh_lookup: HashMap<Dir, (isize, isize)> = HashMap::from([
         (Dir::North, (-1, 0)),
@@ -39,7 +44,12 @@ fn bfs(grid: &Vec<Vec<char>>, start: (usize, usize)) -> usize {
     while !deq.is_empty() {
         let cur = deq.pop_front().unwrap();
         //dbg!(cur);
-        visited.insert(cur);
+        if visited.contains(&(dir, cur)) {
+            looping = true;
+            break;
+        }
+        visited.insert((dir, cur));
+        places.insert(cur);
         let neigh: (isize, isize) = (
             cur.0 as isize + neigh_lookup[&dir].0,
             cur.1 as isize + neigh_lookup[&dir].1,
@@ -61,7 +71,44 @@ fn bfs(grid: &Vec<Vec<char>>, start: (usize, usize)) -> usize {
             }
         }
     }
-    visited.len()
+    (places.len(), looping)
+}
+
+fn count_obstacles(
+    grid: &Vec<Vec<char>>,
+    places: &HashSet<(usize, usize)>,
+    start: (usize, usize),
+) -> u32 {
+    let mut count = 0;
+
+    let mut cpy = grid.clone();
+
+    let mut dummy: HashSet<(usize, usize)> = HashSet::new();
+    for cur in places.iter() {
+        //let cur = places.pop();
+        if *cur == start {
+            dbg!("here");
+            continue;
+        }
+        cpy[cur.0 as usize][cur.1 as usize] = '#';
+
+        match bfs(&cpy, start, &mut dummy) {
+            (val, true) => {
+                count = count + 1;
+                dbg!(cur);
+                if val > places.len() {
+                    dbg!(val);
+                }
+            }
+            (_, false) => {
+                //pass;
+            }
+        }
+
+        dummy.clear();
+        cpy[cur.0 as usize][cur.1 as usize] = '.';
+    }
+    count
 }
 
 fn main() {
@@ -90,6 +137,10 @@ fn main() {
         }
     }
     //dbg!(start);
-    let ans = bfs(&grid, start);
-    dbg!(ans);
+    let mut places: HashSet<(usize, usize)> = HashSet::new();
+    //grid[6][3] = '#';
+    let ans = bfs(&grid, start, &mut places);
+    let count = count_obstacles(&grid, &places, start);
+
+    dbg!(ans, count);
 }
