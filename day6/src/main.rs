@@ -16,96 +16,89 @@ fn valid(grid: &Vec<Vec<char>>, pos: (isize, isize)) -> bool {
     (pos.0 >= 0 && pos.0 < n) && (pos.1 >= 0 && pos.1 < m)
 }
 
-fn bfs(
+fn dfs(
     grid: &Vec<Vec<char>>,
-    start: (usize, usize),
+    cur: (isize, isize),
+    dir: Dir,
     places: &mut HashSet<(usize, usize)>,
-) -> (usize, bool) {
-    let mut visited: HashSet<(Dir, (usize, usize))> = HashSet::new();
-    let mut deq: VecDeque<(usize, usize)> = VecDeque::new();
-    deq.push_back(start);
-    let mut dir = Dir::North;
-    let mut looping = false;
-
-    let neigh_lookup: HashMap<Dir, (isize, isize)> = HashMap::from([
-        (Dir::North, (-1, 0)),
-        (Dir::East, (0, 1)),
-        (Dir::South, (1, 0)),
-        (Dir::West, (0, -1)),
-    ]);
-
-    let dir_lookup: HashMap<Dir, Dir> = HashMap::from([
-        (Dir::North, Dir::East),
-        (Dir::East, Dir::South),
-        (Dir::South, Dir::West),
-        (Dir::West, Dir::North),
-    ]);
-
-    while !deq.is_empty() {
-        let cur = deq.pop_front().unwrap();
-        //dbg!(cur);
-        if visited.contains(&(dir, cur)) {
-            looping = true;
-            break;
-        }
-        visited.insert((dir, cur));
-        places.insert(cur);
-        let neigh: (isize, isize) = (
-            cur.0 as isize + neigh_lookup[&dir].0,
-            cur.1 as isize + neigh_lookup[&dir].1,
-        );
-        if valid(&grid, neigh) {
-            let val = grid[neigh.0 as usize][neigh.1 as usize];
-            if val == '#' {
-                dir = dir_lookup[&dir];
-                //dbg!(&dir);
-                let neigh: (isize, isize) = (
-                    cur.0 as isize + neigh_lookup[&dir].0,
-                    cur.1 as isize + neigh_lookup[&dir].1,
-                );
-                if valid(&grid, neigh) {
-                    deq.push_back((neigh.0 as usize, neigh.1 as usize));
-                }
-            } else {
-                deq.push_back((neigh.0 as usize, neigh.1 as usize));
-            }
-        }
+    visited: &mut HashSet<((usize, usize), Dir)>,
+    nl: &HashMap<Dir, (isize, isize)>,
+    dl: &HashMap<Dir, Dir>,
+) -> bool {
+    if !valid(&grid, cur) {
+        return true;
     }
-    (places.len(), looping)
+
+    if visited.contains(&((cur.0 as usize, cur.1 as usize), dir)) {
+        return false;
+    }
+
+    let mut res = false;
+
+    if grid[cur.0 as usize][cur.1 as usize] == '#' {
+        let del = nl[&dir];
+        let cur = (cur.0 - del.0, cur.1 - del.1);
+        let dir = dl[&dir];
+        res |= dfs(&grid, cur, dir, places, visited, &nl, &dl);
+    } else {
+        visited.insert(((cur.0 as usize, cur.1 as usize), dir));
+        places.insert((cur.0 as usize, cur.1 as usize));
+        let del = nl[&dir];
+
+        res |= dfs(
+            &grid,
+            (cur.0 + del.0, cur.1 + del.1),
+            dir,
+            places,
+            visited,
+            &nl,
+            &dl,
+        );
+    }
+
+    res
 }
 
 fn count_obstacles(
     grid: &Vec<Vec<char>>,
     places: &HashSet<(usize, usize)>,
     start: (usize, usize),
+    nl: &HashMap<Dir, (isize, isize)>,
+    dl: &HashMap<Dir, Dir>,
 ) -> u32 {
     let mut count = 0;
 
-    let mut cpy = grid.clone();
+    let mut cpy: Vec<Vec<char>> = vec![];
+    for v in grid {
+        cpy.push(v.to_vec())
+    }
 
     let mut dummy: HashSet<(usize, usize)> = HashSet::new();
+    let mut dummy2: HashSet<((usize, usize), Dir)> = HashSet::new();
     for cur in places.iter() {
         //let cur = places.pop();
         if *cur == start {
             dbg!("here");
             continue;
         }
+
         cpy[cur.0 as usize][cur.1 as usize] = '#';
 
-        match bfs(&cpy, start, &mut dummy) {
-            (val, true) => {
-                count = count + 1;
-                dbg!(cur);
-                if val > places.len() {
-                    dbg!(val);
-                }
-            }
-            (_, false) => {
-                //pass;
-            }
+        let ans = dfs(
+            &cpy,
+            (start.0 as isize, start.1 as isize),
+            Dir::North,
+            &mut dummy,
+            &mut dummy2,
+            &nl,
+            &dl,
+        );
+        if !ans {
+            count += 1;
         }
 
         dummy.clear();
+        dummy2.clear();
         cpy[cur.0 as usize][cur.1 as usize] = '.';
     }
     count
@@ -138,9 +131,34 @@ fn main() {
     }
     //dbg!(start);
     let mut places: HashSet<(usize, usize)> = HashSet::new();
-    //grid[6][3] = '#';
-    let ans = bfs(&grid, start, &mut places);
-    let count = count_obstacles(&grid, &places, start);
+    let mut visited: HashSet<((usize, usize), Dir)> = HashSet::new();
 
-    dbg!(ans, count);
+    let neigh_lookup: HashMap<Dir, (isize, isize)> = HashMap::from([
+        (Dir::North, (-1, 0)),
+        (Dir::East, (0, 1)),
+        (Dir::South, (1, 0)),
+        (Dir::West, (0, -1)),
+    ]);
+
+    let dir_lookup: HashMap<Dir, Dir> = HashMap::from([
+        (Dir::North, Dir::East),
+        (Dir::East, Dir::South),
+        (Dir::South, Dir::West),
+        (Dir::West, Dir::North),
+    ]);
+
+    //grid[6][3] = '#';
+    //let ans = bfs(&grid, start, &mut places);
+    let ans = dfs(
+        &grid,
+        (start.0 as isize, start.1 as isize),
+        Dir::North,
+        &mut places,
+        &mut visited,
+        &neigh_lookup,
+        &dir_lookup,
+    );
+    let count = count_obstacles(&grid, &places, start, &neigh_lookup, &dir_lookup);
+
+    dbg!(places.len(), count);
 }
