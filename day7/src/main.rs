@@ -83,18 +83,6 @@ impl Iterator for RepeatedPermutations {
     }
 }
 
-/*
-fn main() {
-    let elements = vec!['A', 'B', 'C'];
-    let n = 4; // Number of positions
-
-    let permutations = RepeatedPermutations::new(elements, n);
-
-    for combo in permutations {
-        println!("{}", combo);
-    }
-}
-*/
 fn target_achieved2(nums: &Vec<u64>, target: u64) -> bool {
     let n = nums.len() - 1;
     let ops = vec!['|', '*', '+'];
